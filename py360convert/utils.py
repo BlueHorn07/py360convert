@@ -3,9 +3,9 @@ from scipy.ndimage import map_coordinates
 
 
 def xyzcube(face_w):
-    '''
+    """
     Return the xyz cordinates of the unit cube in [F R B L U D] format.
-    '''
+    """
     out = np.zeros((face_w, face_w * 6, 3), np.float32)
     rng = np.linspace(-0.5, 0.5, num=face_w, dtype=np.float32)
     grid = np.stack(np.meshgrid(rng, -rng), -1)
@@ -45,9 +45,9 @@ def equirect_uvgrid(h, w):
 
 
 def equirect_facetype(h, w):
-    '''
+    """
     0F 1R 2B 3L 4U 5D
-    '''
+    """
     tp = np.roll(np.arange(4).repeat(w // 4)[None, :].repeat(h, 0), 3 * w // 8, 1)
 
     # Prepare ceil mask
@@ -65,30 +65,66 @@ def equirect_facetype(h, w):
 
 
 def xyzpers(h_fov, v_fov, u, v, out_hw, in_rot):
-    out = np.ones((*out_hw, 3), np.float32)
+  """
+    get xyz coordinates by given fov parameters
 
-    x_max = np.tan(h_fov / 2)
-    y_max = np.tan(v_fov / 2)
-    x_rng = np.linspace(-x_max, x_max, num=out_hw[1], dtype=np.float32)
-    y_rng = np.linspace(-y_max, y_max, num=out_hw[0], dtype=np.float32)
-    out[..., :2] = np.stack(np.meshgrid(x_rng, -y_rng), -1)
-    Rx = rotation_matrix(v, [1, 0, 0])
-    Ry = rotation_matrix(u, [0, 1, 0])
-    Ri = rotation_matrix(in_rot, np.array([0, 0, 1.0]).dot(Rx).dot(Ry))
+    u, v (radian): center of fov \\
+    in_rot: fov rotating angle in range [0, 2*pi] \\
+    out[i][j]: (x, y, z) coordinate that (i, j) pixel matches in unit sphere surface
+  """
+  out = np.ones((*out_hw, 3), np.float32) ## (x, y, z)
 
-    return out.dot(Rx).dot(Ry).dot(Ri)
+  x_max = np.tan(h_fov / 2)
+  y_max = np.tan(v_fov / 2)
+  x_rng = np.linspace(-x_max, x_max, num=out_hw[1], dtype=np.float32)
+  y_rng = np.linspace(-y_max, y_max, num=out_hw[0], dtype=np.float32)
+  out[..., :2] = np.stack(np.meshgrid(x_rng, -y_rng), -1) ## fov centered at (u=0, v=0)
 
+  # make rotation matrix to adjust our view to (u, v)
+  Rx = rotation_matrix(v, [1, 0, 0])
+  Ry = rotation_matrix(u, [0, 1, 0])
+  Ri = rotation_matrix(in_rot, np.array([0, 0, 1.0]).dot(Rx).dot(Ry)) ## fov rotation by 'in_rot'
+
+  return out.dot(Rx).dot(Ry).dot(Ri)
+
+def persxyz(h_fov, v_fov, u, v, out_hw, in_rot):
+  """
+    get xyz coordinates by given fov parameters
+
+    u, v (radian): center of fov \\
+    in_rot: fov rotating angle in range [0, 2*pi] \\
+    out[i][j]: (x, y, z) coordinate that (i, j) pixel matches in unit sphere surface
+  """
+  out = np.ones((*out_hw, 3), np.float32) ## (x, y, z)
+
+  x_max = np.tan(h_fov / 2)
+  y_max = np.tan(v_fov / 2)
+  x_rng = np.linspace(-x_max, x_max, num=out_hw[1], dtype=np.float32)
+  y_rng = np.linspace(-y_max, y_max, num=out_hw[0], dtype=np.float32)
+  out[..., :2] = np.stack(np.meshgrid(x_rng, -y_rng), -1) ## fov centered at (u=0, v=0)
+
+  # make rotation matrix to adjust our view to (u, v)
+  Rx = np.transpose(rotation_matrix(v, [1, 0, 0]))
+  Ry = np.transpose(rotation_matrix(u, [0, 1, 0]))
+  Ri = np.transpose(rotation_matrix(in_rot, np.array([0, 0, 1.0]).dot(Rx).dot(Ry))) ## fov rotation by 'in_rot'
+
+  return out.dot(Ri).dot(Ry).dot(Rx)
+  # Rx = rotation_matrix(v, [1, 0, 0])
+  # Ry = rotation_matrix(u, [0, 1, 0])
+  # Ri = rotation_matrix(in_rot, np.array([0, 0, 1.0]).dot(Rx).dot(Ry)) ## fov rotation by 'in_rot'
+
+  # return out.dot(Rx).dot(Ry).dot(Ri)
 
 def xyz2uv(xyz):
-    '''
+  """
     xyz: ndarray in shape of [..., 3]
-    '''
-    x, y, z = np.split(xyz, 3, axis=-1)
-    u = np.arctan2(x, z)
-    c = np.sqrt(x**2 + z**2)
-    v = np.arctan2(y, c)
+  """
+  x, y, z = np.split(xyz, 3, axis=-1)
+  u = np.arctan2(x, z)
+  c = np.sqrt(x**2 + z**2)
+  v = np.arctan2(y, c)
 
-    return np.concatenate([u, v], axis=-1)
+  return np.concatenate([u, v], axis=-1)
 
 
 def uv2unitxyz(uv):
@@ -102,11 +138,11 @@ def uv2unitxyz(uv):
 
 
 def uv2coor(uv, h, w):
-    '''
+    """
     uv: ndarray in shape of [..., 2]
     h: int, height of the equirectangular image
     w: int, width of the equirectangular image
-    '''
+    """
     u, v = np.split(uv, 2, axis=-1)
     coor_x = (u / (2 * np.pi) + 0.5) * w - 0.5
     coor_y = (-v / np.pi + 0.5) * h - 0.5
@@ -122,14 +158,34 @@ def coor2uv(coorxy, h, w):
     return np.concatenate([u, v], axis=-1)
 
 
+def sample_pers(p_img, coor_xy, equirec_hw):
+  """
+    sampling from perspective image
+  """
+  h, w = p_img.shape[:2]
+  equirec = np.zeros((*equirec_hw, 3))
+
+  for i in range(h):
+    for j in range(w):
+      equirec[coor_xy[i][j][1]][coor_xy[i][j][0]] = p_img[i][j]
+
+  return equirec
+
+
 def sample_equirec(e_img, coor_xy, order):
-    w = e_img.shape[1]
-    coor_x, coor_y = np.split(coor_xy, 2, axis=-1)
-    pad_u = np.roll(e_img[[0]], w // 2, 1)
-    pad_d = np.roll(e_img[[-1]], w // 2, 1)
-    e_img = np.concatenate([e_img, pad_d, pad_u], 0)
-    return map_coordinates(e_img, [coor_y, coor_x],
-                           order=order, mode='wrap')[..., 0]
+  """
+    sampling from equirectangular image
+
+    e_img: one channel equirectangular image \\
+    coor_xy: pixel locations that we want to extract \\
+  """
+  w = e_img.shape[1]
+  coor_x, coor_y = np.split(coor_xy, 2, axis=-1)
+  pad_u = np.roll(e_img[[0]], w // 2, 1) ## image padding
+  pad_d = np.roll(e_img[[-1]], w // 2, 1) ## image padding
+  e_img = np.concatenate([e_img, pad_d, pad_u], 0)
+  return map_coordinates(e_img, [coor_y, coor_x],
+                          order=order, mode='wrap')[..., 0]
 
 
 def sample_cubefaces(cube_faces, tp, coor_y, coor_x, order):
@@ -229,15 +285,19 @@ def cube_dice2h(cube_dice):
 
 
 def rotation_matrix(rad, ax):
-    ax = np.array(ax)
-    assert len(ax.shape) == 1 and ax.shape[0] == 3
-    ax = ax / np.sqrt((ax**2).sum())
-    R = np.diag([np.cos(rad)] * 3)
-    R = R + np.outer(ax, ax) * (1.0 - np.cos(rad))
+  """
+    rad: how much rotate \\
+    ax: reference axis to rotate, it is represented by vector
+  """
+  ax = np.array(ax)
+  assert len(ax.shape) == 1 and ax.shape[0] == 3
+  ax = ax / np.sqrt((ax**2).sum()) # normalize axis vector
+  R = np.diag([np.cos(rad)] * 3)
+  R = R + np.outer(ax, ax) * (1.0 - np.cos(rad))
 
-    ax = ax * np.sin(rad)
-    R = R + np.array([[0, -ax[2], ax[1]],
-                      [ax[2], 0, -ax[0]],
-                      [-ax[1], ax[0], 0]])
+  ax = ax * np.sin(rad)
+  R = R + np.array([[0, -ax[2], ax[1]],
+                    [ax[2], 0, -ax[0]],
+                    [-ax[1], ax[0], 0]])
 
-    return R
+  return R
