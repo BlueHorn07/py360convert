@@ -144,6 +144,6 @@ cv2.imwrite("./asset/example_e2p.png", equi_img)
 
 | Idx | Image |
 |:--------:|:--------:|
-| Input Perspective | <img src="asset/example_e2p.png"> |
+| Input Perspective | <img src="asset/example_e2p.png" style="width:50%"> |
 | Output Equirectangular | <img src="asset/example_p2e.png" style="width:70%"> |
 | Original Equirectangular | <img src="asset/example_input.png" style="width:70%"> |
