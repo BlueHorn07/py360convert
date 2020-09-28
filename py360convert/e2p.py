@@ -18,12 +18,9 @@ def e2p(e_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0, mode='bilinear'):
 
   ## check fov_deg is scalar or (sclar, scalar)
   try:
-    if(isinstance(fov_deg, (int, float))):
-      h_fov, v_fov = fov_deg, fov_deg
-    else:
       h_fov, v_fov = math.radians(fov_deg[0]), math.radians(fov_deg[1])
-  except Exception as e:
-    print("incorrect fov_deg", e)
+  except Exception:
+      h_fov, v_fov = math.radians(fov_deg), math.radians(fov_deg)
 
   in_rot = math.radians(in_rot_deg)
 

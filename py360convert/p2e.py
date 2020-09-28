@@ -6,7 +6,7 @@ from . import utils
 
 def p2e(p_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0):
   """
-    p_img:  ndarray in shape of [H, W, *] \\
+    p_img:  ndarray in shape of [H, W, C] \\
     fov_deg: scalar or (scalar, scalar) field of view in degree \\
     u_deg:      horizon viewing angle in range [-180, 180] \\
     v_deg:      vertical viewing angle in range [-90, 90] \\
@@ -20,7 +20,7 @@ def p2e(p_img, fov_deg, u_deg, v_deg, out_hw, in_rot_deg=0):
   ## check fov_deg is scalar or (sclar, scalar)
   try:
     if(isinstance(fov_deg, (int, float))):
-      h_fov, v_fov = fov_deg, fov_deg
+      h_fov, v_fov = math.radians(fov_deg), math.radians(fov_deg)
     else:
       h_fov, v_fov = math.radians(fov_deg[0]), math.radians(fov_deg[1])
   except Exception as e:
